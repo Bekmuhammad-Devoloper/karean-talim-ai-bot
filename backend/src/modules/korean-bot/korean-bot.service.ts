@@ -160,4 +160,33 @@ export class KoreanBotService {
 
     return { sent, failed };
   }
+
+  async broadcastVideo(video: string, caption?: string, keyboard?: any): Promise<{ sent: number; failed: number }> {
+    const users = await this.botUserRepository.find({ where: { isBlocked: false } });
+    let sent = 0;
+    let failed = 0;
+
+    console.log('[KoreanBotService] Broadcasting video to', users.length, 'users');
+
+    for (const user of users) {
+      try {
+        await this.bot.telegram.sendVideo(user.telegramId, video, { 
+          caption, 
+          parse_mode: 'HTML',
+          reply_markup: keyboard,
+        });
+        sent++;
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (error: any) {
+        failed++;
+        if (error.message?.includes('blocked') || error.code === 403) {
+          user.isBlocked = true;
+          await this.botUserRepository.save(user);
+        }
+      }
+    }
+
+    console.log('[KoreanBotService] Video broadcast completed: sent', sent, 'failed', failed);
+    return { sent, failed };
+  }
 }

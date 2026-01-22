@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, In } from 'typeorm';
 import { Post } from './entities/post.entity';
 import { BotService } from '../bot/bot.service';
+import { KoreanBotService } from '../korean-bot/korean-bot.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class PostsService implements OnModuleInit {
     private postRepository: Repository<Post>,
     @Inject(forwardRef(() => BotService))
     private botService: BotService,
+    @Inject(forwardRef(() => KoreanBotService))
+    private koreanBotService: KoreanBotService,
   ) {}
 
   onModuleInit() {
@@ -112,7 +115,7 @@ export class PostsService implements OnModuleInit {
   }
 
   async broadcastPost(id: number): Promise<{ sent: number; failed: number; post: Post | null }> {
-    console.log('[PostsService] Broadcasting post', id, 'to all users');
+    console.log('[PostsService] Broadcasting post', id, 'to all Korean bot users');
     const post = await this.findById(id);
     if (!post) {
       console.log('[PostsService] Post not found for broadcast');
@@ -130,15 +133,16 @@ export class PostsService implements OnModuleInit {
 
       let result: { sent: number; failed: number };
 
+      // Korean bot orqali yuborish
       if (post.type === 'video' && mediaSource) {
-        console.log('[PostsService] Broadcasting video to all users');
-        result = await this.botService.broadcastVideo(mediaSource, post.content, keyboard);
+        console.log('[PostsService] Broadcasting video to Korean bot users');
+        result = await this.koreanBotService.broadcastVideo(mediaSource, post.content, keyboard);
       } else if (post.type === 'photo' && mediaSource) {
-        console.log('[PostsService] Broadcasting photo to all users');
-        result = await this.botService.broadcastPhoto(mediaSource, post.content, keyboard);
+        console.log('[PostsService] Broadcasting photo to Korean bot users');
+        result = await this.koreanBotService.broadcastPhoto(mediaSource, post.content, keyboard);
       } else {
-        console.log('[PostsService] Broadcasting text to all users');
-        result = await this.botService.broadcastMessage(post.content, keyboard);
+        console.log('[PostsService] Broadcasting text to Korean bot users');
+        result = await this.koreanBotService.broadcastMessage(post.content, keyboard);
       }
 
       post.status = 'sent';
