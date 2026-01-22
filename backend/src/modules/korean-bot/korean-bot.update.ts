@@ -110,6 +110,7 @@ export class KoreanBotUpdate implements OnModuleInit, OnModuleDestroy {
       }
 
       const stats = await this.statsService.getKoreanDashboardStats();
+      const adminPanelUrl = this.configService.get('ADMIN_PANEL_URL') || 'https://karean-ai.bekmuhammad.uz';
       
       const message = `
 🔐 *관리자 패널*
@@ -118,9 +119,23 @@ export class KoreanBotUpdate implements OnModuleInit, OnModuleDestroy {
 👥 총 사용자: ${stats.users.total}
 📝 총 요청: ${stats.requests.total}
 📅 오늘: ${stats.users.activeToday}
+
+🔗 Admin panelga kirish uchun pastdagi tugmani bosing.
+⏱ Link 5 daqiqa amal qiladi.
 `;
 
-      await ctx.replyWithMarkdown(message);
+      await ctx.replyWithMarkdown(message, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🖥 Admin Panelga Kirish', url: `${adminPanelUrl}/login` }],
+            [
+              { text: '📊 Statistika', callback_data: 'admin_stats' },
+              { text: '👥 Foydalanuvchilar', callback_data: 'admin_users' }
+            ],
+            [{ text: '📢 Xabar yuborish', callback_data: 'admin_broadcast' }]
+          ]
+        }
+      });
     });
 
     // Text messages
