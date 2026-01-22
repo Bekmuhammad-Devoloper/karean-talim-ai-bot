@@ -29,41 +29,45 @@ export class KoreanBotService {
     const telegramId = String(telegramUser.id);
     
     try {
+      // Avval mavjud userni qidirish
       let user = await this.botUserRepository.findOne({
         where: { telegramId },
       });
 
-      if (!user) {
-        try {
-          user = this.botUserRepository.create({
-            telegramId,
-            username: telegramUser.username,
-            firstName: telegramUser.first_name,
-            lastName: telegramUser.last_name,
-            language: 'ko',
-          });
-          await this.botUserRepository.save(user);
-        } catch (error) {
-          user = await this.botUserRepository.findOne({
-            where: { telegramId },
-          });
-          if (!user) throw error;
-        }
+      if (user) {
+        // User mavjud - yangilash
+        user.lastActiveAt = new Date();
+        user.username = telegramUser.username;
+        user.firstName = telegramUser.first_name;
+        user.lastName = telegramUser.last_name;
+        await this.botUserRepository.save(user);
+        return user;
       }
 
-      user.lastActiveAt = new Date();
-      user.username = telegramUser.username;
-      user.firstName = telegramUser.first_name;
-      user.lastName = telegramUser.last_name;
-      await this.botUserRepository.save(user);
-
-      return user;
-    } catch (error) {
+      // Yangi user yaratish
+      const newUser = new KoreanBotUser();
+      newUser.telegramId = telegramId;
+      newUser.username = telegramUser.username;
+      newUser.firstName = telegramUser.first_name;
+      newUser.lastName = telegramUser.last_name;
+      newUser.language = 'ko';
+      newUser.lastActiveAt = new Date();
+      
+      await this.botUserRepository.save(newUser);
+      return newUser;
+    } catch (error: any) {
+      // UNIQUE constraint xatosi bo'lsa, qayta qidirish
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        const existingUser = await this.botUserRepository.findOne({
+          where: { telegramId },
+        });
+        if (existingUser) {
+          existingUser.lastActiveAt = new Date();
+          await this.botUserRepository.save(existingUser);
+          return existingUser;
+        }
+      }
       console.error('Error in getOrCreateUser (Korean):', error);
-      const existingUser = await this.botUserRepository.findOne({
-        where: { telegramId },
-      });
-      if (existingUser) return existingUser;
       throw error;
     }
   }

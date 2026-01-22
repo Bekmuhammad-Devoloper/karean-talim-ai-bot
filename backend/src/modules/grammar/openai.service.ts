@@ -289,23 +289,33 @@ Eslatma: Qo'lyozma bo'lsa ham har bir so'zni diqqat bilan o'qi!`;
         }
       } catch (parseError) {
         console.error('[OpenAI Vision] JSON parse error, returning raw text');
-        // Agar JSON parse bo'lmasa, matnni qaytarish
+        // Agar JSON parse bo'lmasa, matnni qisqartirib qaytarish (Telegram limit 4096)
+        const truncatedContent = content.length > 3000 ? content.substring(0, 3000) + '...' : content;
         return {
-          originalText: content,
-          correctedText: content,
+          originalText: truncatedContent,
+          correctedText: truncatedContent,
           errorsCount: 0,
           errors: [],
         };
       }
 
       const errors = result.errors || [];
-      const extractedText = result.extractedText || '';
+      let extractedText = result.extractedText || '';
+      let correctedText = result.correctedText || extractedText;
+      
+      // Matnni qisqartirish (Telegram limit 4096 belgi)
+      if (extractedText.length > 2500) {
+        extractedText = extractedText.substring(0, 2500) + '...';
+      }
+      if (correctedText.length > 2500) {
+        correctedText = correctedText.substring(0, 2500) + '...';
+      }
       
       console.log('[OpenAI Vision] Image analysis completed. Text length:', extractedText.length, 'Errors:', errors.length);
 
       return {
         originalText: extractedText,
-        correctedText: result.correctedText || extractedText,
+        correctedText: correctedText,
         errorsCount: errors.length,
         errors: errors,
       };
