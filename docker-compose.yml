@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hilal-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS}
+      - ADMIN_TELEGRAM_IDS=${ADMIN_TELEGRAM_IDS}
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
+    networks:
+      - hilal-network
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hilal-frontend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://138.249.7.238/api
+    depends_on:
+      - backend
+    networks:
+      - hilal-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: hilal-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - hilal-network
+
+  # Certbot for SSL
+  certbot:
+    image: certbot/certbot
+    container_name: hilal-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  hilal-network:
+    driver: bridge
